@@ -1,4 +1,6 @@
-﻿@page "/counter"
+﻿@using JugendLeagueWeb.Data;
+@inject UserService UserService
+@page "/counter"
 
 <PageTitle>Counter</PageTitle>
 
@@ -9,8 +11,13 @@
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
-    private int currentCount = 0;
-
+    int currentCount = 0;
+    protected override async void OnInitialized()
+    {
+        base.OnInitialized();
+        
+    }
+    
     private void IncrementCount()
     {
         currentCount++;
