@@ -16,7 +16,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
+//  Own Services
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<TournamentService>();
 
 var app = builder.Build();
 
