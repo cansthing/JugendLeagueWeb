@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JugendLeagueWeb.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250729155544_tournaments")]
+    [Migration("20250729164233_tournaments")]
     partial class tournaments
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,12 +44,10 @@ namespace JugendLeagueWeb.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("ResponsiblityId")
+                    b.Property<int>("ResponsiblityId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ResponsiblityId");
 
                     b.ToTable("Tournaments");
                 });
@@ -282,15 +280,6 @@ namespace JugendLeagueWeb.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("JugendLeagueWeb.Data.Tournament", b =>
-                {
-                    b.HasOne("JugendLeagueWeb.Data.User", "Responsiblity")
-                        .WithMany()
-                        .HasForeignKey("ResponsiblityId");
-
-                    b.Navigation("Responsiblity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

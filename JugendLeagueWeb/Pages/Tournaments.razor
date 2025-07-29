@@ -1,6 +1,6 @@
 ﻿@page "/tournaments"
 @inject NavigationManager Navigation
-@inject TournamentService TournamentsService
+@inject TournamentService TournamentService
 @using JugendLeagueWeb.Data
 @using System.Collections.ObjectModel
 
@@ -16,8 +16,8 @@
         LoadTournaments();
     }
 
-    private void LoadTournaments()
+    private async void LoadTournaments()
     {
-        
+        AllTournaments = new ObservableCollection<Tournament>(await TournamentService.GetAllTournaments());
     }
 }

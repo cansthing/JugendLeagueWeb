@@ -1,6 +1,6 @@
 ﻿@using JugendLeagueWeb.Data
 @inject NavigationManager Navigation
-@inject TournamentService TournamentsService
+@inject TournamentService TournamentService
 @page "/tournaments/new"
 
 <div class="container mt-4">
@@ -75,10 +75,13 @@
         StateHasChanged();
     }
 
-    public void NextStep()
+    public async void NextStep()
     {
         if (State == 3)
+        {
+            await TournamentService.CreateTournament(NewTournament);
             Navigation.NavigateTo("/tournaments");
+        }
         else
         {
             State = State += 1;

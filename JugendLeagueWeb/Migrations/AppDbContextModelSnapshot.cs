@@ -42,12 +42,10 @@ namespace JugendLeagueWeb.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("ResponsiblityId")
+                    b.Property<int>("ResponsiblityId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ResponsiblityId");
 
                     b.ToTable("Tournaments");
                 });
@@ -280,15 +278,6 @@ namespace JugendLeagueWeb.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("JugendLeagueWeb.Data.Tournament", b =>
-                {
-                    b.HasOne("JugendLeagueWeb.Data.User", "Responsiblity")
-                        .WithMany()
-                        .HasForeignKey("ResponsiblityId");
-
-                    b.Navigation("Responsiblity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

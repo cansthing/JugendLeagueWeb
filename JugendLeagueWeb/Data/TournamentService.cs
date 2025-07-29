@@ -12,7 +12,7 @@ namespace JugendLeagueWeb.Data
         {
             _context = context;
         }
-        public async Task<List<Tournament>> GetTournaments()
+        public async Task<List<Tournament>> GetAllTournaments()
         {
             return await _context.Tournaments.ToListAsync<Tournament>();
         }
