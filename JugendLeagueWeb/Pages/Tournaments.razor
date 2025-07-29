@@ -1,0 +1,22 @@
+﻿@page "/tournaments"
+@inject NavigationManager Navigation
+@using JugendLeagueWeb.Data
+@using System.Collections.ObjectModel
+
+<a href="tournaments/new">+ Hinzufügen</a>
+<h6>Hier sollten die Turniere gelistet sein</h6>
+
+@code {
+    ObservableCollection<Tournament> AllTournaments { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadTournaments();
+    }
+
+    private void LoadTournaments()
+    {
+        
+    }
+}
