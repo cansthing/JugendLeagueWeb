@@ -5,6 +5,7 @@
 @inject TournamentService TournamentService
 @inject TeamService TeamService
 @inject UserService UserService
+@inject GroupService GroupService
 
 <div class="view-container">
     <div class="view-content">
@@ -156,10 +157,197 @@
                 </div>
                 break;
 
-            // Bestätigung
+            //  Gruppen erstellen
             case 3:
                 <div class="container mt-4">
-                    <p class="lead">Bestätigung & Zusammenfassung</p>
+                    <div class="row g-3">
+                        <!-- Eckdaten & Parameter -->
+                        <div class="col-lg-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <strong>Einstellungen</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Teams gesamt</span>
+                                            <span class="badge bg-secondary">@TotalTeams</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Gruppengröße (Vorschlag)</label>
+                                        <div class="input-group">
+                                            <button class="btn btn-outline-secondary" @onclick="() => ChangeGroupSize(-1)">-</button>
+                                            <input class="form-control text-center" type="number" min="3" max="10"
+                                                   @bind="ProposedGroupSize" @bind:event="oninput" />
+                                            <button class="btn btn-outline-secondary" @onclick="() => ChangeGroupSize(1)">+</button>
+                                        </div>
+                                        <div class="form-text">Empfohlen: @RecommendedGroupSize (anpassbar)</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Spielzeit pro Match (Minuten)</label>
+                                        <input class="form-control" type="number" min="5" max="180" @bind="MatchMinutes" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Anzahl Courts/Plätze</label>
+                                        <input class="form-control" type="number" min="1" max="32" @bind="Courts" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Verfügbare Zeit (Stunden)</label>
+                                        <input class="form-control" type="number" step="0.5" min="1" max="24" @bind="AvailableHours" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="koToggle" @bind="KoPhasePlanned" />
+                                            <label class="form-check-label" for="koToggle">KO-Phase geplant</label>
+                                        </div>
+                                    </div>
+
+                                    @if (KoPhasePlanned)
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label">Ziel-KO-Feld</label>
+                                            <select class="form-select" @bind="TargetKoSize">
+                                                <option value="8">8er-Feld</option>
+                                                <option value="16">16er-Feld</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Qualifikanten pro Gruppe</label>
+                                            <input class="form-control" type="number" min="1" max="4" @bind="QualifiersPerGroup" />
+                                        </div>
+                                    }
+
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" @onclick="RecalculateSuggestion">
+                                            Vorschlag neu berechnen
+                                        </button>
+                                        <button class="btn btn-outline-secondary" @onclick="ShuffleTeams">
+                                            Teams mischen
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vorschlag & Kennzahlen -->
+                        <div class="col-lg-8">
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header">
+                                    <strong>Vorschlag & Kennzahlen</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6 col-md-3 mb-3">
+                                            <div class="small text-muted">Gruppen</div>
+                                            <div class="fs-4">@ProposedGroupCount</div>
+                                        </div>
+                                        <div class="col-6 col-md-3 mb-3">
+                                            <div class="small text-muted">Verteilung</div>
+                                            <div>
+                                                @if (DistributionSummary.Any())
+                                                {
+                                                    @string.Join(", ", DistributionSummary)
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3 mb-3">
+                                            <div class="small text-muted">Spiele (Gruppenphase)</div>
+                                            <div class="fs-5">@TotalGroupMatches</div>
+                                        </div>
+                                        <div class="col-6 col-md-3 mb-3">
+                                            <div class="small text-muted">Kapazität</div>
+                                            <div>
+                                                @if (CapacityOk)
+                                                {
+                                                    <span class="badge bg-success">passt</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">zu wenig</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (KoPhasePlanned)
+                                    {
+                                        <div class="alert @(KoFitOk ? "alert-success" : "alert-warning") mt-3">
+                                            <div><strong>KO-Phase:</strong> Qualifikanten gesamt: <span class="badge bg-secondary">@TotalQualifiers</span></div>
+                                            <div>Ziel-Bracket: <strong>@TargetKoSize</strong>, Byes: <strong>@ByesNeeded</strong></div>
+                                            @if (!KoFitOk)
+                                            {
+                                                <div class="small text-muted">Hinweis: Passe Gruppengröße oder Qualifikanten/Gruppe an, um Byes zu vermeiden.</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Vorschau Gruppen & Zuordnung -->
+                            <div class="card shadow-sm">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <strong>Gruppen-Vorschau</strong>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="replaceGroups" @bind="ReplaceExistingGroups" />
+                                        <label class="form-check-label" for="replaceGroups">Existierende Gruppen ersetzen</label>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    @if (ProposedGroupsPreview.Any())
+                                    {
+                                        <div class="row">
+                                            @foreach (var g in ProposedGroupsPreview)
+                                            {
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="border rounded p-2 h-100">
+                                                        <h6 class="mb-2">@g.Name <span class="badge bg-light text-dark">@g.Teams.Count</span></h6>
+                                                        <ul class="list-group list-group-flush">
+                                                            @foreach (var t in g.Teams)
+                                                            {
+                                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                    @t.Name
+                                                                    <span class="badge bg-secondary">@t.TeamPlayers?.Count</span>
+                                                                </li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mb-0">Noch keine Vorschau. Klicke auf „Vorschlag neu berechnen“.</p>
+                                    }
+                                </div>
+                                @if (UnassignedTeamCount > 0)
+                                {
+                                    <div class="alert alert-danger d-flex align-items-center mt-3" role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                        Achtung: <strong>@UnassignedTeamCount</strong> Team(s) wurden nicht zugeordnet und würden beim Speichern verloren gehen!
+                                    </div>
+                                }
+                                <div class="card-footer d-flex justify-content-end gap-2">
+                                    <button class="btn btn-outline-secondary" @onclick="RecalculateSuggestion">Neu berechnen</button>
+                                    <button class="btn btn-primary"
+                                            @onclick="SaveGroupsAsync"
+                                            disabled="@(!ProposedGroupsPreview.Any() || UnassignedTeamCount > 0)">
+                                        Gruppen speichern
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 break;
 
@@ -189,6 +377,248 @@
 
     // Auswahl im UI (SelectPerson) als Liste von Usern
     private List<User> SelectedUsersForNewTeam { get; set; } = new();
+
+    #region Case3
+    // Schritt-3-Parameter und Zustand
+    private int TotalTeams => NewTournament?.Teams?.Count ?? 0;
+
+    private int RecommendedGroupSize { get; set; } = 5;   // Startempfehlung
+    private int ProposedGroupSize { get; set; } = 5;
+    private int ProposedGroupCount { get; set; }
+    private List<string> DistributionSummary { get; set; } = new();
+    private int TotalGroupMatches { get; set; }
+    private bool CapacityOk { get; set; }
+
+    private int MatchMinutes { get; set; } = 15;
+    private int Courts { get; set; } = 2;
+    private double AvailableHours { get; set; } = 6;
+
+    private bool KoPhasePlanned { get; set; } = false;
+    private int TargetKoSize { get; set; } = 8;
+    private int QualifiersPerGroup { get; set; } = 2;
+    private int TotalQualifiers => ProposedGroupCount * QualifiersPerGroup;
+    private int ByesNeeded => Math.Max(0, TargetKoSize - TotalQualifiers);
+    private bool KoFitOk => !KoPhasePlanned || (TotalQualifiers == TargetKoSize);
+
+    private bool ReplaceExistingGroups { get; set; } = true;
+    private int UnassignedTeamCount => TotalTeams - ProposedGroupsPreview.Sum(g => g.Teams.Count);
+
+    // Vorschau-Struktur
+    private class GroupPreview
+    {
+        public string Name { get; set; } = "";
+        public List<Team> Teams { get; set; } = new();
+    }
+
+    private List<GroupPreview> ProposedGroupsPreview { get; set; } = new();
+    private readonly Random _rng = new Random();
+
+    // Beim Eintritt in Schritt 3 initial berechnen
+    private async Task EnsureStep3InitializedAsync()
+    {
+        if (State == 3)
+        {
+            // einfache Heuristik: 4..6 prüfen
+            RecommendedGroupSize = SuggestGroupSize();
+            if (ProposedGroupSize < 3) ProposedGroupSize = RecommendedGroupSize;
+            await RecalculateSuggestion();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Wenn State auf 3 wechselt (Navigation), initialisieren
+        await EnsureStep3InitializedAsync();
+    }
+
+    // Vorschlags-Heuristik (ohne Slots: 4..6, mit KO-Bezug)
+    private int SuggestGroupSize()
+    {
+        if (TotalTeams <= 3) return TotalTeams; // Mini-Setup
+        var candidates = new[] { 4, 5, 6 }.Where(g => g >= 3 && g <= 10).ToList();
+
+        int bestG = candidates.First();
+        double bestScore = double.NegativeInfinity;
+
+        foreach (var g in candidates)
+        {
+            var groups = (int)Math.Ceiling(TotalTeams / (double)g);
+            var remainder = TotalTeams % g;
+            var dist = Enumerable.Range(0, groups)
+                                 .Select(i => i < remainder ? g : g == 0 ? 0 : g - 1)
+                                 .ToList();
+
+            // Spiele zählen
+            int matches = dist.Sum(n => n * (n - 1) / 2);
+
+            // Kapazitätsabschätzung
+            int capacity = Courts * (int)Math.Floor((AvailableHours * 60) / MatchMinutes);
+            bool capacityOk = matches <= capacity;
+            
+            // KO-Fit
+            var qualifiers = QualifiersPerGroup * groups;
+            int koPenalty = 0;
+            if (KoPhasePlanned)
+            {
+                koPenalty = Math.Abs(TargetKoSize - qualifiers); // je näher, desto besser
+            }
+
+            // Scoring: geringe Abweichung bevorzugen, Kapazität wichtig, kleinere g leicht bevorzugen
+            double fairness = (dist.Max() - dist.Min()) <= 1 ? 1.0 : 0.0;
+            double sizeBias = -0.05 * g; // leichte Bevorzugung kleinerer Gruppen
+            double capScore = capacityOk ? 1.0 : -1.0;
+            double koScore = KoPhasePlanned ? -koPenalty * 0.2 : 0.0;
+
+            double score = 2.0 * fairness + 1.5 * capScore + koScore + sizeBias;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestG = g;
+            }
+        }
+
+        return bestG;
+    }
+
+    private async Task RecalculateSuggestion()
+    {
+        if (TotalTeams <= 0) { ProposedGroupsPreview.Clear(); return; }
+
+        // Berechnung auf Basis ProposedGroupSize
+        var g = Math.Max(3, Math.Min(10, ProposedGroupSize));
+        ProposedGroupSize = g;
+
+        ProposedGroupCount = (int)Math.Ceiling(TotalTeams / (double)g);
+        var remainder = TotalTeams % g;
+
+        // Verteilung: r Gruppen mit g, Rest mit (g-1)
+        var sizes = Enumerable.Range(0, ProposedGroupCount)
+                              .Select(i => i < remainder ? g : g - 1)
+                              .ToList();
+
+        // Wenn g-1 == 0 (z. B. T < g), korrigieren
+        for (int i = 0; i < sizes.Count; i++)
+            if (sizes[i] <= 0) sizes[i] = 1;
+
+        DistributionSummary = sizes
+            .GroupBy(x => x)
+            .OrderByDescending(gr => gr.Key)
+            .Select(gr => $"{gr.Count()}×{gr.Key}")
+            .ToList();
+
+        TotalGroupMatches = sizes.Sum(n => n * (n - 1) / 2);
+        int capacity = Courts * (int)Math.Floor((AvailableHours * 60) / MatchMinutes);
+        CapacityOk = TotalGroupMatches <= capacity;
+
+        // Teams mischen und verteilen
+        BuildPreviewFromSizes(sizes);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void BuildPreviewFromSizes(List<int> sizes)
+    {
+        var teams = (NewTournament?.Teams ?? new List<Team>()).ToList();
+        // Shuffle
+        teams = teams.OrderBy(_ => _rng.Next()).ToList();
+
+        ProposedGroupsPreview.Clear();
+        var groupNames = GenerateGroupNames(sizes.Count);
+
+        int index = 0;
+        for (int i = 0; i < sizes.Count; i++)
+        {
+            var take = sizes[i];
+            var chunk = teams.Skip(index).Take(take).ToList();
+            index += take;
+
+            ProposedGroupsPreview.Add(new GroupPreview
+            {
+                Name = groupNames[i],
+                Teams = chunk
+            });
+        }
+    }
+
+    private List<string> GenerateGroupNames(int count)
+    {
+        // A, B, C, ... Z, AA, AB, ...
+        var names = new List<string>();
+        int n = count;
+        int i = 0;
+        while (names.Count < n)
+        {
+            names.Add(ToLetters(i));
+            i++;
+        }
+        return names.Select(x => $"Gruppe {x}").ToList();
+
+        static string ToLetters(int number)
+        {
+            const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var s = "";
+            do
+            {
+                s = alphabet[number % 26] + s;
+                number = number / 26 - 1;
+            } while (number >= 0);
+            return s;
+        }
+    }
+
+    private void ChangeGroupSize(int delta)
+    {
+        ProposedGroupSize = Math.Clamp(ProposedGroupSize + delta, 3, 10);
+        _ = RecalculateSuggestion();
+    }
+
+    private void ShuffleTeams()
+    {
+        _ = RecalculateSuggestion(); // Shuffeln ist im Rebuild enthalten
+    }
+
+    private async Task SaveGroupsAsync()
+    {
+        if (NewTournament is null || ProposedGroupsPreview.Count == 0) return;
+
+        // Optional: existierende Gruppen ersetzen
+        if (ReplaceExistingGroups)
+        {
+            var existing = await GroupService.GetByTournamentAsync(NewTournament.Id);
+            foreach (var g in existing)
+            {
+                // Teams daraus lösen (damit keine FK-Probleme)
+                foreach (var t in g.Teams.ToList())
+                {
+                    await GroupService.RemoveTeamAsync(t.Id);
+                }
+                await GroupService.DeleteAsync(g.Id);
+            }
+        }
+
+        // Neue Gruppen anlegen und Teams zuweisen
+        foreach (var gp in ProposedGroupsPreview)
+        {
+            var group = new Group
+            {
+                Name = gp.Name,
+                TournamentId = NewTournament.Id
+            };
+            var groupId = await GroupService.SaveAsync(group);
+
+            foreach (var t in gp.Teams)
+            {
+                await GroupService.AssignTeamAsync(groupId, t.Id);
+            }
+        }
+
+        // Turnier neu laden, damit UI die neuen Gruppen/Zuordnungen sieht
+        var updated = await TournamentService.GetByPublicIdAsync(NewTournament.PublicId);
+        if (updated is not null) NewTournament = updated;
+
+        // Hinweis: du könntest hier eine Success-Toast einblenden
+    }
+    #endregion
 
     protected override async Task OnInitializedAsync()
     {
