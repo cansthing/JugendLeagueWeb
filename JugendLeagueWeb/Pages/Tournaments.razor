@@ -3,21 +3,96 @@
 @inject TournamentService TournamentService
 @using JugendLeagueWeb.Data
 @using System.Collections.ObjectModel
+@using JugendLeagueWeb.Data.Models
+@using JugendLeagueWeb.Data.Services
 
-<a href="tournaments/new">+ Hinzufügen</a>
-<h6>Hier sollten die Turniere gelistet sein</h6>
+<div class="container d-flex justify-content-end mb-3">
+    <a href="tournaments/new" class="btn btn-primary"><span class="oi oi-plus" aria-hidden="true"></span> Neu</a>
+</div>
+@if(AllTournaments.Count>0)
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Id</th>
+                            <th>Name</th>
+                            <th>Datum u. Uhrzeit</th>
+                            <th>Ort</th>
+                            <th>Verantwortlich</th>
+                            <th>KO?</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var block in AllTournaments)
+                        {
+                            <tr @onclick="@(()=> TournamentSelected(block))">
+                                <td>@block.Id</td>
+                                <td>@block.Name</td>
+                                <td>@block.StartAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@block.Location</td>
+                                <td>@block.ResponsibleUser.ToString()</td>
+                                <td>@block.IsKnockout</td>
+                                <td>
+                                    <a class="btn btn-sm btn-secondary" @onclick="@(()=> EditTournament(block))">
+                                        <span class="oi oi-wrench"></span>
+                                        Bearbeiten
+                                    </a> 
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    @if (TournamentsLoaded)
+    {
+        <div class="alert alert-info justify-content-lg-center">
+            <label>Keine Turniere vorhanden.</label>
+            <br />
+            <a href="tournaments/new"><span class="oi oi-plus" aria-hidden="true"></span> Neues erstellen</a>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <label>Turniere werden geladen.</label>
+        </div>
+    }
+}
+
 
 @code {
     ObservableCollection<Tournament> AllTournaments { get; set; } = new();
+    public bool TournamentsLoaded { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
-        LoadTournaments();
+        Guid guid = Guid.NewGuid();
+        TournamentsLoaded = false;
+        await base.OnInitializedAsync();
+        await LoadTournaments();
     }
 
-    private async void LoadTournaments()
+    private async Task LoadTournaments()
     {
-        AllTournaments = new ObservableCollection<Tournament>(await TournamentService.GetAllTournaments());
+        AllTournaments = new(await TournamentService.GetAllAsync());
+        TournamentsLoaded = true;
+        StateHasChanged();
+    }
+    private void TournamentSelected(Tournament tournament)
+    {
+        
+    }
+    private void EditTournament(Tournament tournament)
+    {
+        Navigation.NavigateTo($"/tournaments/e/{tournament.PublicId}/1");
     }
 }

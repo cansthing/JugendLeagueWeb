@@ -1,0 +1,319 @@
+﻿@using JugendLeagueWeb.Data.Models
+@using System.Collections.ObjectModel
+@using JugendLeagueWeb.Data.Services
+@inject NavigationManager Navigation
+@inject TournamentService TournamentService
+@inject TeamService TeamService
+@inject UserService UserService
+
+<div class="view-container">
+    <div class="view-content">
+        <div class="container mt-4">
+            <ul class="nav nav-pills justify-content-center">
+                <li class="nav-item">
+                    <span class="nav-link @(State == 1 ? "active" : State > 1 ? "bg-success text-white" : "disabled")">
+                        Schritt 1: Turnierdaten
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link @(State == 2 ? "active" : State > 2 ? "bg-success text-white" : "disabled")">
+                        Schritt 2: Teilnehmer
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link @(State == 3 ? "active" : "disabled")">
+                        Schritt 3: Bestätigung
+                    </span>
+                </li>
+            </ul>
+        </div>
+
+        @switch (State)
+        {
+            // Basisdaten
+            case 1:
+                <div class="container mt-4">
+                    <div class="card m-2 shadow p-2">
+                        <h4>Turnier erstellen</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input @bind="NewTournament.Name" type="text" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Datum und Uhrzeit</label>
+                            <!-- lokale DateTime binden, im Code in StartAt (DateTimeOffset) umrechnen -->
+                            <input @bind="StartAtLocal" type="datetime-local" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ort</label>
+                            <input @bind="NewTournament.Location" type="text" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Verantwortlich</label>
+                            <SelectPerson
+                                AvailableItems="Users"
+                                MaximalTeamSize="1"
+                                OptimalTeamSize="1"
+                                SelectedItems="@(NewTournament.ResponsibleUser is null ? new() : new() { NewTournament.ResponsibleUser })"
+                                OnSelectedUserChanged="@((user) => {
+                                    NewTournament.ResponsibleUser = user;
+                                    NewTournament.ResponsibleUserId = user?.Id;
+                                })" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Optimale Teamgröße</label>
+                            <input @bind="NewTournament.OptimalTeamSize" type="number" class="form-control"/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Maximale Teamgröße</label>
+                            <input @bind="NewTournament.MaximalTeamSize" type="number" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+                break;
+
+            // Teams erstellen
+            case 2:
+                <div class="container mt-4">
+                    <div class="card m-2 shadow p-2">
+                        <h4>Neues Team</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Teamnamen</label>
+                            <input @bind="NewTeam.Name" type="text" class="form-control"/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teammitglieder</label>
+                            @if (Users != null && Users.Any())
+                            {
+                                <SelectPerson
+                                    AvailableItems="Users"
+                                    MaximalTeamSize="@NewTournament!.MaximalTeamSize"
+                                    OptimalTeamSize="@NewTournament.OptimalTeamSize"
+                                    SelectedItems="SelectedUsersForNewTeam"
+                                    SelectedItemsChanged="@((selected) => SelectedUsersForNewTeam = selected.ToList())" />
+                            }
+                            else
+                            {
+                                <p class="text-muted">Lade Teilnehmer...</p>
+                            }
+                        </div>
+                        <div class="container d-flex justify-content-lg-start gap-2">
+                            <button class="btn btn-outline-light" @onclick="NewTeamObject">Neu</button>
+                            <button class="btn btn-outline-primary" @onclick="AddTeam">Speichern</button>
+                        </div>
+                    </div>
+
+                    <div class="card m-2 shadow p-2">
+                        <h4>Teams</h4>
+                        @if(NewTournament != null && NewTournament.Teams != null && NewTournament.Teams.Count > 0)
+                        {
+                            <div class="card shadow-sm">
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover mb-0 align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Teamname</th>
+                                                    <th>Gruppenmitglieder</th>
+                                                    <th class="text-end">Aktionen</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var team in NewTournament.Teams)
+                                                {
+                                                    <tr>
+                                                        <td>@team.Name</td>
+                                                        <td>
+                                                            <ul class="mb-0">
+                                                                @foreach (var tp in team.TeamPlayers ?? Enumerable.Empty<TeamPlayer>())
+                                                                {
+                                                                    <li>@tp.User?.ToString()</li>
+                                                                }
+                                                            </ul>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <div class="btn-group">
+                                                                <button class="btn btn-sm btn-outline-secondary" @onclick="(() => TeamSelected(team))">Bearbeiten</button>
+                                                                <button class="btn btn-sm btn-danger" @onclick="(() => DeleteTeam(team))">Löschen</button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div>
+                                <label>Keine Teams vorhanden.</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+                break;
+
+            // Bestätigung
+            case 3:
+                <div class="container mt-4">
+                    <p class="lead">Bestätigung & Zusammenfassung</p>
+                </div>
+                break;
+
+            default:
+                <div class="container mt-4">
+                    <p class="text-muted">Ungültiger Schritt</p>
+                    <p class="text muted">Geh zurück oder achte darauf, dass die letzte Ziffer in der URL eine Zahl zwischen 1 und 3 ist.</p>
+                </div>
+                break;
+        }
+    </div>
+
+    <div class="button-bar mb-0">
+        <button class="btn btn-secondary" @onclick="LastStep">Zurück</button>
+        <button class="btn btn-primary" @onclick="NextStep">@(State == 3 ? "Speichern" : "Weiter")</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int State { get; set; } = 1;
+    [Parameter] public Tournament? NewTournament { get; set; }
+    public Team NewTeam { get; set; } = new();
+    public ObservableCollection<User> Users { get; set; } = new();
+
+    // Für datetime-local Binding
+    private DateTime StartAtLocal { get; set; } = DateTime.Now;
+
+    // Auswahl im UI (SelectPerson) als Liste von Usern
+    private List<User> SelectedUsersForNewTeam { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        EnsureTournamentDefaults();
+        StartAtLocal = NewTournament!.StartAt.LocalDateTime;
+        await LoadUsers();
+    }
+
+    private void EnsureTournamentDefaults()
+    {
+        if (NewTournament is null)
+        {
+            NewTournament = new Tournament
+            {
+                Name = string.Empty,
+                StartAt = DateTimeOffset.Now,
+                OptimalTeamSize = 5,
+                MaximalTeamSize = 7
+            };
+        }
+    }
+
+    private void LastStep()
+    {
+        if (State > 1)
+        {
+            State--;
+            Navigation.NavigateTo($"/tournaments/e/{NewTournament?.PublicId}/{State}");
+        }
+        if (State == 1)
+        {
+            Navigation.NavigateTo("/tournaments");
+        }
+        StateHasChanged();
+    }
+
+    private async Task NextStep()
+    {
+        if (NewTournament is null) return;
+
+        // StartAt aus lokalem Picker in DateTimeOffset umrechnen
+        var offset = TimeZoneInfo.Local.GetUtcOffset(StartAtLocal);
+        NewTournament.StartAt = new DateTimeOffset(StartAtLocal, offset);
+
+        // Step 1 speichern
+        if (State == 1)
+        {
+            var id = await TournamentService.SaveAsync(NewTournament);
+            NewTournament.Id = id;
+        }
+
+        // letzter Step
+        if (State == 3)
+        {
+            Navigation.NavigateTo("/tournaments");
+        }
+        else
+        {
+            State++;
+            Navigation.NavigateTo($"/tournaments/e/{NewTournament.PublicId}/{State}");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task LoadUsers()
+    {
+        var list = await UserService.GetAllAsync();
+        Users = new ObservableCollection<User>(list);
+    }
+
+    private void NewTeamObject()
+    {
+        NewTeam = new Team
+        {
+            TournamentId = NewTournament?.Id ?? 0,
+            Name = string.Empty
+        };
+        SelectedUsersForNewTeam = new();
+    }
+
+    private async Task AddTeam()
+    {
+        if (NewTeam is null || NewTournament is null) return;
+
+        var hasName = !string.IsNullOrWhiteSpace(NewTeam.Name);
+        var hasPlayers = SelectedUsersForNewTeam.Count > 0;
+        if (!hasName && !hasPlayers) return;
+
+        NewTeam.TournamentId = NewTournament.Id;
+
+        await TeamService.SaveAsync(NewTeam, SelectedUsersForNewTeam);
+
+        // Turnier neu laden (mit Includes)
+        var updatedTournament = await TournamentService.GetByPublicIdAsync(NewTournament.PublicId);
+        if (updatedTournament is not null)
+            NewTournament = updatedTournament;
+
+        NewTeamObject();
+        StateHasChanged();
+    }
+
+    private async Task DeleteTeam(Team team)
+    {
+        if (team is null) return;
+
+        await TeamService.DeleteAsync(team.Id);
+
+        var updated = await TournamentService.GetByPublicIdAsync(NewTournament!.PublicId);
+        if (updated is not null) NewTournament = updated;
+
+        StateHasChanged();
+    }
+
+    private void TeamSelected(Team team)
+    {
+        NewTeam = team;
+
+        // Aktuelle Auswahl aus TeamPlayers ableiten
+        SelectedUsersForNewTeam = (team.TeamPlayers ?? new List<TeamPlayer>())
+            .Select(tp => tp.User)
+            .Where(u => u != null)
+            .Cast<User>()
+            .ToList();
+
+        StateHasChanged();
+    }
+}

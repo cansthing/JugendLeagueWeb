@@ -1,0 +1,160 @@
+﻿@using System.Linq
+@using System.Collections.Generic
+@using JugendLeagueWeb.Data.Models
+
+<div>
+    @if (MaximalTeamSize == 1)
+    {
+        <!-- Einzelne Person auswählen -->
+        <div class="mb-3">
+            @if (SelectedItems.Count == 0)
+            {
+                <input type="text"
+                       class="form-control"
+                       @bind="SearchText"
+                       @oninput="UpdateSuggestions"
+                       placeholder="Person suchen..." />
+
+                <ul class="list-group mt-2">
+                    @foreach (var suggestion in Suggestions)
+                    {
+                        <li class="list-group-item list-group-item-action"
+                            role="button"
+                            @onclick="() => AddUser(suggestion)">
+                            @suggestion
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="d-flex align-items-center mt-2">
+                    <span class="badge bg-primary me-2 p-2">@SelectedItems[0]</span>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            @onclick="() => RemoveUser(SelectedItems[0])">
+                        &times;
+                    </button>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Mehrere Personen auswählen -->
+        <div class="mb-3">
+            <input type="text"
+                   class="form-control"
+                   @bind="SearchText"
+                   @oninput="UpdateSuggestions"
+                   placeholder="Personen suchen..." />
+
+            <ul class="list-group mt-2">
+                @foreach (var suggestion in Suggestions)
+                {
+                    <li class="list-group-item list-group-item-action"
+                        role="button"
+                        @onclick="() => AddUser(suggestion)">
+                        @suggestion
+                    </li>
+                }
+            </ul>
+
+            <div class="mt-3">
+                @foreach (var user in SelectedItems)
+                {
+                    <span class="badge bg-primary me-2 p-2">
+                        @user
+                        <button type="button"
+                                class="btn-close btn-close-white ms-2"
+                                style="font-size: 0.6rem;"
+                                @onclick="() => RemoveUser(user)">
+                        </button>
+                    </span>
+                }
+            </div>
+
+            @if (OptimalTeamSize.HasValue)
+            {
+                <div class="form-text mt-2">
+                    Optimale Teamgröße: @OptimalTeamSize
+                </div>
+            }
+        </div>
+    }
+</div>
+
+
+@code {
+    [Parameter]
+    public IEnumerable<User> AvailableItems { get; set; } = Enumerable.Empty<User>();
+
+    [Parameter]
+    public int MaximalTeamSize { get; set; } = 1;
+
+    [Parameter]
+    public int? OptimalTeamSize { get; set; }
+
+    [Parameter]
+    public EventCallback<List<User>> OnSelectedItemsChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<User?> OnSelectedUserChanged { get; set; }
+
+    [Parameter]
+    public List<User> SelectedItems { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<List<User>> SelectedItemsChanged { get; set; }
+
+    private List<User> Suggestions { get; set; } = new();
+    private string SearchText { get; set; } = string.Empty;
+
+    private void UpdateSuggestions(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? string.Empty;
+        Suggestions = AvailableItems
+            .Where(u => !SelectedItems.Contains(u) &&
+                        u.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(u => u.Lastname)
+            .ThenBy(u => u.Firstname)
+            .ToList();
+    }
+
+    private async Task AddUser(User user)
+    {
+        if (SelectedItems.Contains(user)) return;
+
+        if (MaximalTeamSize == 1)
+        {
+            SelectedItems.Clear();
+            SelectedItems.Add(user);
+            await OnSelectedUserChanged.InvokeAsync(user);
+        }
+        else
+        {
+            if (SelectedItems.Count < MaximalTeamSize)
+                SelectedItems.Add(user);
+        }
+
+        await OnSelectedItemsChanged.InvokeAsync(SelectedItems);
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+
+        SearchText = string.Empty;
+        Suggestions.Clear();
+    }
+
+    private async Task RemoveUser(User user)
+    {
+        SelectedItems.Remove(user);
+        await OnSelectedItemsChanged.InvokeAsync(SelectedItems);
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+
+        if (MaximalTeamSize == 1)
+        {
+            await OnSelectedUserChanged.InvokeAsync(null);
+        }
+
+        StateHasChanged();
+    }
+}

@@ -1,91 +1,10 @@
 ﻿@using JugendLeagueWeb.Data
-@inject NavigationManager Navigation
-@inject TournamentService TournamentService
+@using JugendLeagueWeb.Data.Models
+
 @page "/tournaments/new"
 
-<div class="container mt-4">
-    <ul class="nav nav-pills justify-content-center">
-        <li class="nav-item">
-            <span class="nav-link @(State == 1 ? "active" : State > 1 ? "bg-success text-white" : "disabled")">
-                Schritt 1: Turnierdaten
-            </span>
-        </li>
-        <li class="nav-item">
-            <span class="nav-link @(State == 2 ? "active" : State > 2 ? "bg-success text-white" : "disabled")">
-                Schritt 2: Teilnehmer
-            </span>
-        </li>
-        <li class="nav-item">
-            <span class="nav-link @(State == 3 ? "active" : "disabled")">
-                Schritt 3: Bestätigung
-            </span>
-        </li>
-    </ul>
-</div>
-@switch (State)
-{
-    case 1:
-        <div class="container mt-4">
-            <h2>Turnier erstellen</h2>
-            <div class="mb-3">
-                <label class="form-label">Name</label>
-                <input @bind="NewTournament.Name" type="text" class="form-control" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Datum und Uhrzeit</label>
-                <input @bind="NewTournament.DateTime" type="datetime-local" class="form-control" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Ort</label>
-                <input @bind="NewTournament.Location" type="text" class="form-control" />
-            </div>
-        </div>
-        break;
-
-    case 2:
-        <div class="container mt-4">
-            <p class="lead">Teams erstellen</p>
-        </div>
-        break;
-
-    case 3:
-        <div class="container mt-4">
-            <p class="lead">Bestätigung & Zusammenfassung</p>
-        </div>
-        break;
-
-    default:
-        <div class="container mt-4">
-            <p class="text-muted">Ungültiger Schritt</p>
-        </div>
-        break;
-}
-<div class="container mt-3 d-flex justify-content-between">
-    <button class="btn btn-secondary @(State<=1?"disabled": "visible")" @onclick="LastStep">Zurück</button>
-    <button class="btn btn-primary" @onclick="NextStep">@(State ==3?"Speichern":"Weiter")</button>
-</div>
+<AETournament NewTournament="@NewTournament"/>
 
 @code {
-    public int State { get; set; } = 1;
-    public Tournament NewTournament { get; set; } = new();
-
-    public void LastStep()
-    {
-        State = State -= 1;
-        StateHasChanged();
-    }
-
-    public async void NextStep()
-    {
-        if (State == 3)
-        {
-            await TournamentService.CreateTournament(NewTournament);
-            Navigation.NavigateTo("/tournaments");
-        }
-        else
-        {
-            State = State += 1;
-            StateHasChanged();
-        }
-    }
+    public Tournament? NewTournament { get; set; } = new();
 }

@@ -1,5 +1,23 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
+.view-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 960px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+}
+
+.button-bar {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 0;
+    background-color: white;
+    border-top: 1px solid #ddd;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
