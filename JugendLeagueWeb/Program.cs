@@ -7,28 +7,31 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore.Design;
 using JugendLeagueWeb.Data.Services;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-//builder.Services.AddDbContext<AppDbContext>(options =>
-//    options.UseSqlServer(connectionString));
-
-//  Own Services
+// Eigene Services
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TournamentService>();
 builder.Services.AddScoped<GroupService>();
 builder.Services.AddScoped<TeamService>();
 
-
-// EF DbContext registrieren (Postgres-Beispiel)
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgre")));
-
+// Umgebungsspezifisches DbContext-Setup
+if (builder.Environment.IsDevelopment())
+{
+    // In Dev: SQL Server verwenden
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
+else
+{
+    // In Production: PostgreSQL verwenden
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("Postgre")));
+}
 
 var app = builder.Build();
 
@@ -36,24 +39,20 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-
-// Achtung: Auto-Migrate on startup
-using (var scope = app.Services.CreateScope())
+else
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate(); // wendet alle ausstehenden Migrationen an
+    // Auto-Migrate nur im Development-Modus
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+    }
 }
 
-
-
-
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.MapBlazorHub();
