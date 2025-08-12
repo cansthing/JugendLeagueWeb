@@ -14,6 +14,7 @@ namespace JugendLeagueWeb.Data.Services
         // 📥 Tournament speichern (neu oder aktualisiert)
         public async Task<int> SaveAsync(Tournament tournament)
         {
+            tournament.StartAt = tournament.StartAt.ToUniversalTime();
             if (tournament.Id == 0)
                 _context.Tournaments.Add(tournament);
             else

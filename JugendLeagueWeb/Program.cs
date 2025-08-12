@@ -27,7 +27,7 @@ builder.Services.AddScoped<TeamService>();
 
 // EF DbContext registrieren (Postgres-Beispiel)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgre")));
 
 
 var app = builder.Build();

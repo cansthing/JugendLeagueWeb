@@ -24,6 +24,6 @@ namespace JugendLeagueWeb.Data.Models
         public ICollection<Team> Teams { get; set; } = new HashSet<Team>();
         public ICollection<Group> Groups { get; set; } = new HashSet<Group>();
 
-        public byte[] RowVersion { get; set; } = null!; // Concurrency-Token
+        public byte[]? RowVersion { get; set; } = null!; // Concurrency-Token
     }
 }
