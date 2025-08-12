@@ -1,0 +1,31 @@
+﻿@page "/tournaments/v/{TournamentId:guid}"
+@using JugendLeagueWeb.Data.Models
+@using JugendLeagueWeb.Data.Services
+
+@inject TournamentService TournamentService
+
+@if (Loaded)
+{
+    <label class="alert alert-success">Geladen!<br>Anzeige folgt...</label>
+}
+else
+{
+    <label class="alert alert-info">Loading...</label>
+}
+
+@code {
+    [Parameter]
+    public Guid TournamentId { get; set; }
+    [Parameter]
+    public int State { get; set; } = 1;
+
+    public Tournament? TournamentToEdit { get; set; }
+
+    private bool Loaded { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        TournamentToEdit = await TournamentService.GetByPublicIdAsync(TournamentId);
+        Loaded = true;
+    }
+}
